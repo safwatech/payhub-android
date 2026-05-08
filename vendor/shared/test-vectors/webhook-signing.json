@@ -1,0 +1,128 @@
+{
+  "$schema": "https://payhub.ly/schemas/webhook-signing-vectors-v1.json",
+  "version": 1,
+  "algorithm": "HMAC-SHA256",
+  "header_name": "Hub-Signature",
+  "header_format": "t=<unix_seconds>,v1=<hmac_sha256_hex>",
+  "signed_bytes_template": "f\"{t}.\".encode() + raw_body_bytes",
+  "default_tolerance_seconds": 300,
+  "notes": [
+    "secret_hex is the hex-encoded raw secret bytes the merchant configured.",
+    "body_b64 is base64-encoded raw request body bytes; SDKs decode and hash these bytes verbatim.",
+    "now is the wall-clock the verifier should treat as 'now' for the tolerance check.",
+    "expect is one of: ok, TimestampOutOfTolerance, InvalidSignature, MalformedHeader.",
+    "Forward compatibility: headers carrying additional comma-separated key=value pairs MUST verify if t and v1 are valid."
+  ],
+  "cases": [
+    {
+      "name": "valid_v1",
+      "description": "Vanilla success: HMAC matches, timestamp inside tolerance window.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=2430ef1105a3d6db20aaf78d180995999459f21f119e950285b91b418a804c61",
+      "expect": "ok"
+    },
+    {
+      "name": "expired_outside_tolerance",
+      "description": "Timestamp 600 s old; default tolerance is 300 s; reject.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1729999400,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1729999400,v1=92cf93ffb5b725defd4633f414b01d2a459af23f0cddd7893db3a1ee56038adb",
+      "expect": "TimestampOutOfTolerance"
+    },
+    {
+      "name": "future_outside_tolerance",
+      "description": "Timestamp 600 s in the future; reject.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000600,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000600,v1=80ba7d8ad2c30d202aaf05d694ad9dfbb6336d724c658c1fd92d3fea252b9b34",
+      "expect": "TimestampOutOfTolerance"
+    },
+    {
+      "name": "invalid_signature",
+      "description": "Last hex char of v1 is flipped; HMAC mismatch.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=2430ef1105a3d6db20aaf78d180995999459f21f119e950285b91b418a804c60",
+      "expect": "InvalidSignature"
+    },
+    {
+      "name": "missing_t",
+      "description": "Header has only v1=, no t=.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "v1=2430ef1105a3d6db20aaf78d180995999459f21f119e950285b91b418a804c61",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "missing_v1",
+      "description": "Header has only t=, no v1=.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000",
+      "expect": "MalformedHeader"
+    },
+    {
+      "name": "extra_unknown_keys",
+      "description": "Header carries extra unknown comma-separated keys; verifier must ignore.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8xIiwidHlwZSI6InBheW1lbnQuc3VjY2VlZGVkIiwicGF5bWVudF9pZCI6InBheV8xIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=2430ef1105a3d6db20aaf78d180995999459f21f119e950285b91b418a804c61,extra=foo,unused=bar",
+      "expect": "ok"
+    },
+    {
+      "name": "unicode_body",
+      "description": "UTF-8 body bytes (Arabic) round-trip; SDKs must hash raw bytes, not re-encoded strings.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8yIiwibm90ZSI6IkxpYnlhIOKAlCDYr9mK2YbYp9ixIn0=",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=3251bb7c85a8cbe3cb966727e795c8972c886d8ceb0e6792b466ecab3b6dadc9",
+      "expect": "ok"
+    },
+    {
+      "name": "empty_body",
+      "description": "Zero-length body still signs and verifies.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=1e242ba659cdb30bc6f575b3f0ab51796819a277bd1e26a39c9bedb81699fdbd",
+      "expect": "ok"
+    },
+    {
+      "name": "paylink_paid_body",
+      "description": "Pay-link event body (`paylink.paid`). Locks the forward-compatibility property: SDK verifiers must accept unknown event_type strings and produce a typed Event for them, not reject the delivery.",
+      "secret_hex": "5e8843f7a2c1bd9e0f4e7c5b1a9d2f3e6c8b4a1f7d9e2c3b5a8f1d4e7c9b2a3f",
+      "body_b64": "eyJpZCI6ImV2dF8zIiwidHlwZSI6InBheWxpbmsucGFpZCIsInBheW1lbnRfaWQiOiJwYXlfMiIsInByZXZfc3RhdHVzIjoicmVxdWlyZXNfYWN0aW9uIiwibmV3X3N0YXR1cyI6InN1Y2NlZWRlZCIsInBheWxvYWQiOnsicGF5X2xpbmtfaWQiOiJwbF8xIiwic2hvcnRfdG9rZW4iOiJhYmMxMjNkZWY0NTYiLCJhbW91bnRfbWlub3IiOjQ1MDAsImN1cnJlbmN5IjoiTFlEIn19",
+      "timestamp": 1730000000,
+      "now": 1730000000,
+      "tolerance_seconds": 300,
+      "header": "t=1730000000,v1=efe0c20719b2730da6dadade0643dc307a9042e3e897f4edb0d985d4243da29c",
+      "expect": "ok"
+    }
+  ]
+}

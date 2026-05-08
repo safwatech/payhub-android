@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "package-name": "ly.payhub:payhub-android",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "include-v-in-tag": true,
+  "changelog-path": "CHANGELOG.md",
+  "extra-files": ["payhub/build.gradle.kts", "payhub/src/main/kotlin/ly/payhub/PayhubClient.kt"],
+  "changelog-sections": [
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "perf", "section": "Performance Improvements"},
+    {"type": "deps", "section": "Dependencies"},
+    {"type": "revert", "section": "Reverts"},
+    {"type": "docs", "section": "Documentation"},
+    {"type": "refactor", "section": "Code Refactoring"}
+  ]
+}

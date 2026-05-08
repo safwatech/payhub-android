@@ -1,0 +1,63 @@
+{
+  "$schema": "https://payhub.ly/schemas/next-action-fixtures-v1.json",
+  "version": 1,
+  "description": "Canonical JSON for each next_action variant. Every SDK's deserializer must round-trip these into the discriminated NextAction sum type with the same field names. The discriminator key is 'type'.",
+  "fixtures": [
+    {
+      "name": "otp_required",
+      "expect_kind": "OtpRequired",
+      "json": {
+        "type": "otp_required",
+        "psp_ref": "TXN_3F8A91",
+        "masked_destination": "2189...12"
+      }
+    },
+    {
+      "name": "redirect_get",
+      "expect_kind": "Redirect",
+      "json": {
+        "type": "redirect",
+        "url": "https://tlync.example/pay/abc123",
+        "method": "GET",
+        "fields": {}
+      }
+    },
+    {
+      "name": "redirect_post",
+      "expect_kind": "Redirect",
+      "json": {
+        "type": "redirect",
+        "url": "https://tlync.example/pay",
+        "method": "POST",
+        "fields": {"token": "abc123", "ref": "ord-7"}
+      }
+    },
+    {
+      "name": "qr",
+      "expect_kind": "QR",
+      "json": {
+        "type": "qr",
+        "reference": "MC_REF_001",
+        "qr_payload": "{\"type\":\"mobicash\",\"reference\":\"MC_REF_001\",\"amount\":4500,\"currency\":\"LYD\"}",
+        "expires_at": "2026-05-05T19:30:00+00:00"
+      }
+    },
+    {
+      "name": "lightbox",
+      "expect_kind": "Lightbox",
+      "json": {
+        "type": "lightbox",
+        "params": {
+          "MerchantId": "10081014649",
+          "TerminalId": "99179395",
+          "Amount": "4500",
+          "MerchantReference": "ord-42",
+          "Currency": "434",
+          "DateTimeLocalTrxn": "202605051930",
+          "SecureHash": "ABCDEF0123456789",
+          "lightbox_js_url": "https://tnpg.moamalat.net:6006/js/lightbox.js"
+        }
+      }
+    }
+  ]
+}
