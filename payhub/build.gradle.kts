@@ -31,12 +31,10 @@ android {
         freeCompilerArgs = listOf("-Xexplicit-api=strict")
     }
 
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
-        }
-    }
+    // The vanniktech-maven-publish plugin (mavenPublishing { … } block
+    // below) configures singleVariant("release") with sources + javadoc
+    // jars itself. Re-declaring it here triggers AGP's "Using
+    // singleVariant publishing DSL multiple times" error.
 
     testOptions {
         unitTests {
