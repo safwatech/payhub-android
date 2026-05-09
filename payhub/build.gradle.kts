@@ -24,12 +24,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs = listOf(
-            "-Xexplicit-api=strict",
-            // PayhubClient.kt uses non-local break from an inline lambda
-            // — stable since Kotlin 2.1; older compilers need explicit opt-in.
-            "-Xnon-local-break-continue",
-        )
+        freeCompilerArgs = listOf("-Xexplicit-api=strict")
     }
 
     publishing {

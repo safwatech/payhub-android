@@ -98,11 +98,16 @@ public class PayhubClient @JvmOverloads constructor(
 
             try {
                 val resp = http.newCall(reqBuilder.build()).await()
-                resp.use {
-                    val status = it.code
-                    val raw = it.body?.string().orEmpty()
+                // try/finally instead of resp.use { } — `continue` from
+                // inside an inline lambda is non-local and requires
+                // Kotlin 2.1; we want this code to build on older
+                // Kotlin compilers (e.g. JitPack's SDKMAN-installed
+                // gradle bundle).
+                try {
+                    val status = resp.code
+                    val raw = resp.body?.string().orEmpty()
                     if (status in 200..299) return raw
-                    val retryAfter = it.header("Retry-After")?.toIntOrNull()
+                    val retryAfter = resp.header("Retry-After")?.toIntOrNull()
                     val parsed = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject
                     val apiErr = ErrorMapping.fromEnvelope(status, parsed, retryAfter)
                     if (retriable && (status >= 500 || status == 429) && attempt + 1 < attempts) {
@@ -111,6 +116,8 @@ public class PayhubClient @JvmOverloads constructor(
                         continue
                     }
                     throw apiErr
+                } finally {
+                    resp.close()
                 }
             } catch (e: SocketTimeoutException) {
                 lastErr = TimeoutException(e.message ?: "timed out", e)
