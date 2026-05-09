@@ -15,21 +15,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || github.sha }}
+
+      - name: Stage shared test vectors at the path tests expect
+        run: |
+          # Tests reference File("../../shared/test-vectors/..."). On the
+          # mirror, vectors live in vendor/shared/test-vectors/ — stage a
+          # sibling 'shared/' so both monorepo and mirror runs resolve.
+          mkdir -p ../shared
+          cp -R vendor/shared/test-vectors ../shared/
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Decode signing keystore
+
+      - name: Install Gradle 8.10
+        # No gradlew wrapper is checked in. Pin Gradle to a version
+        # current with AGP 8.5 (which requires ≥ 8.7).
         run: |
-          echo "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}" | base64 -d > payhub/payhub-release.keystore
-      - name: Assemble + sign + publish
+          curl -fsSL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.10-bin.zip
+          sudo unzip -q /tmp/gradle.zip -d /opt
+          echo "/opt/gradle-8.10/bin" >> "$GITHUB_PATH"
+
+      - name: Publish to Maven Central via vanniktech-maven-publish
         env:
-          ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.OSSRH_USERNAME }}
-          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-          ANDROID_KEYSTORE_PATH: payhub/payhub-release.keystore
-          ANDROID_KEYSTORE_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
-          ANDROID_KEYSTORE_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
-          ANDROID_KEYSTORE_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
-        run: ./gradlew :payhub:publishReleasePublicationToSonatypeRepository closeAndReleaseSonatypeStagingRepository
+          # Sonatype Central Portal credentials (auto-generated user token).
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
+          # GPG key + passphrase, in-memory.
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: gradle :payhub:publishToMavenCentral --no-configuration-cache --stacktrace

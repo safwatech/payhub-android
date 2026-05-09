@@ -2,7 +2,11 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
-    `maven-publish`
+    // Vanniktech's gradle-maven-publish handles bundle assembly + GPG
+    // signing + Sonatype Central Portal upload. As of 0.30 it targets
+    // the new Central Portal (https://central.sonatype.com), not the
+    // legacy oss.sonatype.org / nexus-staging flow.
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
 group = "ly.payhub"
@@ -55,28 +59,44 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = group.toString()
-            artifactId = "payhub"
-            version = version
+mavenPublishing {
+    // Central Portal target. automaticRelease=true means the staged
+    // bundle auto-publishes once Sonatype validation passes; flip to
+    // false if you want manual Publish click in the Portal UI.
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
+    signAllPublications()
 
-            afterEvaluate {
-                from(components["release"])
-            }
+    coordinates("ly.payhub", "payhub-android", project.version.toString())
 
-            pom {
-                name.set("PayHub Android SDK")
-                description.set("Official PayHub SDK for Android (Kotlin coroutines + OkHttp).")
-                url.set("https://payhub.ly")
-                licenses {
-                    license {
-                        name.set("MIT")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
+    pom {
+        name.set("PayHub Android SDK")
+        description.set("Official PayHub SDK for Android — Sadad, Moamalat, Mobicash, T-Lync, Adfali behind one API. Kotlin coroutines + OkHttp.")
+        inceptionYear.set("2026")
+        url.set("https://payhub.ly")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+                distribution.set("repo")
             }
+        }
+        developers {
+            developer {
+                id.set("safwatech")
+                name.set("Safwa Tech")
+                email.set("info@payhub.ly")
+                organization.set("Safwa Tech")
+                organizationUrl.set("https://payhub.ly")
+            }
+        }
+        scm {
+            connection.set("scm:git:https://github.com/safwatech/payhub-android.git")
+            developerConnection.set("scm:git:ssh://git@github.com/safwatech/payhub-android.git")
+            url.set("https://github.com/safwatech/payhub-android")
+        }
+        issueManagement {
+            system.set("GitHub")
+            url.set("https://github.com/safwatech/payhub-android/issues")
         }
     }
 }
