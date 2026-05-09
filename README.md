@@ -4,7 +4,7 @@ Official PayHub SDK for Android. Kotlin coroutines, OkHttp under the hood,
 discriminated `NextAction`, typed `PayhubException` hierarchy, and a
 webhook verifier you can run inside a Worker / ViewModel.
 
-## Install (JitPack — available today)
+## Install
 
 ```kotlin
 // settings.gradle.kts
@@ -12,23 +12,17 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
     }
 }
 
 // app/build.gradle.kts
 dependencies {
-    implementation("com.github.safwatech:payhub-android:v1.0.5")
+    implementation("ly.payhub:payhub-android:1.0.0")
 }
 ```
 
 `minSdk = 24`. The SDK does not request any permissions other than
-`INTERNET`.
-
-> **Maven Central note** — `ly.payhub:payhub-android:1.0.0`
-> coordinates are reserved and will be activated once the Sonatype
-> Central Portal setup completes. JitPack is the recommended install
-> today; the API surface is identical.
+`INTERNET`. AAR + sources/javadoc jars are GPG-signed.
 
 ## Quickstart — Sadad OTP
 
