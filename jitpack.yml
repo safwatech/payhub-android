@@ -12,7 +12,10 @@ jdk:
 
 # No gradlew wrapper checked in — install gradle via SDKMAN.
 before_install:
-  - sdk install gradle 8.5 < /dev/null
+  # AGP 8.5.x requires Gradle ≥ 8.7. Pin a version current as of
+  # 2026-Q2; older AGP / older gradle pairings here just mean you
+  # need to bump or pin.
+  - sdk install gradle 8.10 < /dev/null
 
 install:
   - gradle :payhub:publishReleasePublicationToMavenLocal -x test
