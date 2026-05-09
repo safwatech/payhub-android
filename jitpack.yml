@@ -10,5 +10,9 @@
 jdk:
   - openjdk17
 
+# No gradlew wrapper checked in — install gradle via SDKMAN.
+before_install:
+  - sdk install gradle 8.5 < /dev/null
+
 install:
-  - ./gradlew :payhub:publishReleasePublicationToMavenLocal -x test
+  - gradle :payhub:publishReleasePublicationToMavenLocal -x test
