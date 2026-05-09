@@ -1,0 +1,14 @@
+# JitPack build config for the Android SDK.
+#
+# JitPack runs `./gradlew publishToMavenLocal` to produce the Maven
+# artifacts, which it then re-serves under
+# com.github.safwatech:payhub-android:<version>. We skip unit tests
+# because they read shared test-vector fixtures that live two levels
+# above the package root — a path that resolves on the upstream
+# monorepo but not on a JitPack-cloned checkout. Mirror CI enforces
+# the same tests on every release.
+jdk:
+  - openjdk17
+
+install:
+  - ./gradlew :payhub:publishReleasePublicationToMavenLocal -x test
