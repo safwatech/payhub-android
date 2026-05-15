@@ -25,6 +25,33 @@ public class AuthenticationException internal constructor(
     message: String, code: String, httpStatus: Int, details: Map<String, Any?>, requestId: String?,
 ) : PayhubApiException(message, code, httpStatus, details, requestId)
 
+/** A 401 with `code = "mfa_required"` (or `hub.merchant.mfa_required`).
+ *  The caller's auth state is unchanged; re-prompt for TOTP and retry the
+ *  same request with the code supplied. Distinct from [AuthenticationException]
+ *  so the UI can route this branch to the MFA prompt instead of the login
+ *  screen. */
+public class MfaRequiredError internal constructor(
+    message: String, code: String, httpStatus: Int, details: Map<String, Any?>, requestId: String?,
+) : PayhubApiException(message, code, httpStatus, details, requestId) {
+    public constructor(message: String) : this(message, "mfa_required", 401, emptyMap(), null)
+}
+
+/** A 4xx with an envelope carrying a stable [code] plus optional [params]
+ *  for variable interpolation (e.g. `merchant.last_owner` + `["alice"]`).
+ *  Apps key off [code] for localised rendering; [message] is the server's
+ *  English fallback. */
+public class MerchantValidationError internal constructor(
+    message: String,
+    code: String,
+    httpStatus: Int,
+    public val params: List<String>,
+    details: Map<String, Any?>,
+    requestId: String?,
+) : PayhubApiException(message, code, httpStatus, details, requestId) {
+    public constructor(code: String, params: List<String>, message: String) :
+        this(message, code, 422, params, emptyMap(), null)
+}
+
 public class PermissionException internal constructor(
     message: String, code: String, httpStatus: Int, details: Map<String, Any?>, requestId: String?,
 ) : PayhubApiException(message, code, httpStatus, details, requestId)
@@ -70,8 +97,10 @@ internal object ErrorMapping {
         var message = "HTTP $httpStatus"
         var details: Map<String, Any?> = emptyMap()
         var requestId: String? = null
+        var params: List<String> = emptyList()
 
-        val err = (body as? JsonObject)?.get("error") as? JsonObject
+        val obj = body as? JsonObject
+        val err = obj?.get("error") as? JsonObject
         if (err != null) {
             code = (err["code"] as? JsonPrimitive)?.contentOrNull ?: code
             message = (err["message"] as? JsonPrimitive)?.contentOrNull ?: message
@@ -80,6 +109,33 @@ internal object ErrorMapping {
             if (d != null) {
                 details = d.mapValues { (_, v) -> v.toString() }
             }
+            params = (err["params"] as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                .orEmpty()
+        } else if (obj != null) {
+            // Flat envelope `{code, message, params?}` — the SDK-1.2 contract
+            // for merchant-side endpoints. Keeps backwards-compat with the
+            // wrapped `{error: {...}}` shape above.
+            code = (obj["code"] as? JsonPrimitive)?.contentOrNull ?: code
+            message = (obj["message"] as? JsonPrimitive)?.contentOrNull ?: message
+            requestId = (obj["request_id"] as? JsonPrimitive)?.contentOrNull
+            params = (obj["params"] as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                .orEmpty()
+        }
+
+        // Sniff MFA-required first: a 401 with the catalogue code routes to
+        // the dedicated MFA branch rather than the generic AuthenticationException.
+        if (httpStatus == 401 && (code == "mfa_required" || code == "hub.merchant.mfa_required")) {
+            return MfaRequiredError(message, code, httpStatus, details, requestId)
+        }
+
+        // A 4xx body that carried a `params` array, or a `merchant.*`-style
+        // catalogue code, surfaces as MerchantValidationError so apps can
+        // localise it via the catalogue. 500+ stays in the server bucket.
+        if (httpStatus in 400..499 && (params.isNotEmpty() || code.startsWith("merchant.") ||
+                code.startsWith("hub.merchant."))) {
+            return MerchantValidationError(message, code, httpStatus, params, details, requestId)
         }
 
         return when (httpStatus) {

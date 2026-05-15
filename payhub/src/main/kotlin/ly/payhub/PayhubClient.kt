@@ -38,7 +38,7 @@ public class PayhubClient @JvmOverloads constructor(
 ) {
     public companion object {
         public const val DEFAULT_BASE_URL: String = "https://app.payhub.ly"
-        public const val VERSION: String = "1.0.0"
+        public const val VERSION: String = "1.2.0"
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 
